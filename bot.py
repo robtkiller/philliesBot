@@ -76,13 +76,16 @@ def get_status():
     game = get_game('Phillies', game_date)
     if game:
         try: 
-            return {'inning': game['status']['inning'],
+            status = {'inning': game['status']['inning'],
                     'inning_state': game['status']['inning_state'],
                     'outs' : game['status']['o'],
                     'batter': game['batter']['name_display_roster'],
                     'avg' : game['batter']['avg'],
                     'runners' : game['runners_on_base']['status']
                     }
+            p = inflect.engine()
+            return status['inning_state'] + ' of the ' + p.ordinal(status['inning']) + ' with ' + status['outs'] + ' ' + p.plural('out', status['outs']) + ' - ' + status['batter'] + '(' + status['avg'] + ' AVG) with ' + status['runners'] + ' ' + p.plural('runner', status['runners']) + ' on base.'
+
         except KeyError:
             return get_score()
 
@@ -125,11 +128,7 @@ def record(bot, update):
 
 
 def status(bot, update):
-    status = get_status()
-    p = inflect.engine()
-    bot.sendMessage(update.message.chat_id, text=
-        status['inning_state'] + ' of the ' + p.ordinal(status['inning']) + ' with ' + status['outs'] + ' ' + p.plural('out', status['outs']) + ' - ' + status['batter'] + '(' + status['avg'] + ' AVG) with ' + status['runners'] + ' ' + p.plural('runner', status['runners']) + ' on base.'
-    )
+    bot.sendMessage(update.message.chat_id, text= get_status())
 
 
 def error(bot, update, error):
