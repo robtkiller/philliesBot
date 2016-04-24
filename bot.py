@@ -4,6 +4,8 @@ import json
 from telegram.ext import Updater
 import logging
 import inflect
+import sqlite3
+import xmltodict
 
 
 # Enable logging
@@ -13,7 +15,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
+# Functions for getting data from MLB
 def get_game(team,date):
     year = str(date.year)
     month = str(date.strftime('%m'))
@@ -90,6 +92,30 @@ def get_status():
             return get_score()
 
 
+def get_stats(player_name):
+    sql_name = ('%' + player_name.replace(' ', '%') + '%',)
+    db = sqlite3.connect('players.db')
+    cur = db.cursor()
+    cur.execute('SELECT mlb_id, mlb_name, mlb_pos, mlb_team FROM player WHERE mlb_name LIKE ?', sql_name)
+    mlb_ids = cur.fetchall()
+    if len(mlb_ids) == 0:
+        return "Hmm...I don't know him. Try another name."
+    elif len(mlb_ids) == 1:
+        today = date.today()
+        year = str(today.year)
+        month = str(today.strftime('%m'))
+        day = str(today.strftime('%d'))
+        player_id = str(mlb_ids[0][0])
+        base_url = 'http://gd2.mlb.com/components/game/mlb/year_{}/month_{}/day_{}/batters/{}_1.xml'.format(year, month, day, player_id)
+        response = urlopen(base_url).read().decode('utf-8')
+        data = xmltodict.parse(response)
+        return 'AVG: ' + data['batting']['@avg'] + '\n' + 'Hits: ' + data['batting']['@s_h'] + '\n' + 'HRs: ' + data['batting']['@s_hr'] + '\n' + 'RBIs: ' + data['batting']['@s_rbi'] + '\n' + 'SO: ' + data['batting']['@s_so'] + '\n' + 'BB: ' + data['batting']['@s_bb']
+
+    else:
+        names = '\n'.join([' - '.join(player[1:4]) for player in mlb_ids])
+        return 'More than one player found. \n' + names
+
+
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
 
@@ -102,9 +128,6 @@ def help(bot, update):
                     text= """I am PhilliesBot. You can ask me to tell you the score of today\'s game by sending
                      `/score`. More commands will be coming soon! Beep boop bleep.""")
 
-
-# def echo(bot, update):
-#    bot.sendMessage(update.message.chat_id, text=update.message.text)
 
 def score(bot, update):
     current_score = get_score()
@@ -124,11 +147,27 @@ def howard(bot, update):
 
 
 def record(bot, update):
-    bot.sendMessage(update.message.chat_id, text='The Phillies\' record is:  ' + get_record())     
+    bot.sendMessage(update.message.chat_id, text='The Phillies\' record is:  ' + get_record())
 
 
 def status(bot, update):
     bot.sendMessage(update.message.chat_id, text= get_status())
+
+
+def stats(bot, update):
+    bot.sendMessage(update.message.chat_id, text='Which player would you like stats for?')
+
+
+def reply_handler(bot, update):
+    reply_to = update.message.reply_to_message
+    if reply_to:
+        reply_to_user = reply_to.from_user.username
+        reply_to_text = reply_to.text
+        if reply_to_user == 'PhilliesBot' and reply_to_text == 'Which player would you like stats for?':
+            request = update.message.text
+            player_stats = get_stats(request)
+            if player_stats:
+                bot.sendMessage(update.message.chat_id, text=player_stats)
 
 
 def error(bot, update, error):
@@ -156,6 +195,8 @@ def main():
     dp.addTelegramCommandHandler("record",record)
     dp.addTelegramCommandHandler("status",status)
     dp.addTelegramCommandHandler("howard",howard)
+    dp.addTelegramCommandHandler("stats", stats)
+    dp.addTelegramMessageHandler(reply_handler)
 
     # on noncommand i.e message - echo the message on Telegram
     #dp.addTelegramMessageHandler(echo)
