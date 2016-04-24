@@ -1,3 +1,4 @@
+import urllib
 from urllib.request import urlopen
 from datetime import date, timedelta
 import json
@@ -101,15 +102,20 @@ def get_stats(player_name):
     if len(mlb_ids) == 0:
         return "Hmm...I don't know him. Try another name."
     elif len(mlb_ids) == 1:
-        today = date.today()
-        year = str(today.year)
-        month = str(today.strftime('%m'))
-        day = str(today.strftime('%d'))
-        player_id = str(mlb_ids[0][0])
-        base_url = 'http://gd2.mlb.com/components/game/mlb/year_{}/month_{}/day_{}/batters/{}_1.xml'.format(year, month, day, player_id)
-        response = urlopen(base_url).read().decode('utf-8')
-        data = xmltodict.parse(response)
-        return 'AVG: ' + data['batting']['@avg'] + '\n' + 'Hits: ' + data['batting']['@s_h'] + '\n' + 'HRs: ' + data['batting']['@s_hr'] + '\n' + 'RBIs: ' + data['batting']['@s_rbi'] + '\n' + 'SO: ' + data['batting']['@s_so'] + '\n' + 'BB: ' + data['batting']['@s_bb']
+        dt = date.today()
+        for x in range(20):
+            dt -= timedelta(days=1)
+            year = str(dt.year)
+            month = str(dt.strftime('%m'))
+            day = str(dt.strftime('%d'))
+            player_id = str(mlb_ids[0][0])
+            try:
+                base_url = 'http://gd2.mlb.com/components/game/mlb/year_{}/month_{}/day_{}/batters/{}_1.xml'.format(year, month, day, player_id)
+                response = urlopen(base_url).read().decode('utf-8')
+                data = xmltodict.parse(response)
+                return 'AVG: ' + data['batting']['@avg'] + '\n' + 'Hits: ' + data['batting']['@s_h'] + '\n' + 'HRs: ' + data['batting']['@s_hr'] + '\n' + 'RBIs: ' + data['batting']['@s_rbi'] + '\n' + 'SO: ' + data['batting']['@s_so'] + '\n' + 'BB: ' + data['batting']['@s_bb']
+            except urllib.error.HTTPError:
+                pass
 
     else:
         names = '\n'.join([' - '.join(player[1:4]) for player in mlb_ids])
