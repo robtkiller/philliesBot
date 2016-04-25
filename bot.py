@@ -132,8 +132,8 @@ def start(bot, update):
 
 def help(bot, update):
     bot.sendMessage(update.message.chat_id,
-                    text= """I am PhilliesBot. You can ask me to tell you the score of today\'s game by sending
-                     `/score`. More commands will be coming soon! Beep boop bleep.""")
+                    parse_mode= 'Markdown',
+                    text= """I am PhilliesBot. You can ask me to tell you the score of today\'s game by sending `/score`. Other commands: \n `/status` Details of whats going on in the game \n `/pitchers` Find out who's pitching in today's game \n `/record` Gets the current Phillies' record \n `/stats` Get any MLB player's hitting stats""")
 
 
 def score(bot, update):
