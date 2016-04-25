@@ -113,7 +113,8 @@ def get_stats(player_name):
                 base_url = 'http://gd2.mlb.com/components/game/mlb/year_{}/month_{}/day_{}/batters/{}_1.xml'.format(year, month, day, player_id)
                 response = urlopen(base_url).read().decode('utf-8')
                 data = xmltodict.parse(response)
-                return 'AVG: ' + data['batting']['@avg'] + '\n' + 'Hits: ' + data['batting']['@s_h'] + '\n' + 'HRs: ' + data['batting']['@s_hr'] + '\n' + 'RBIs: ' + data['batting']['@s_rbi'] + '\n' + 'SO: ' + data['batting']['@s_so'] + '\n' + 'BB: ' + data['batting']['@s_bb']
+                name_info = ' - '.join(mlb_ids[0][1:4])
+                return  '*'+name_info+'*' + '\n' + 'AVG: ' + data['batting']['@avg'] + '\n' + 'Hits: ' + data['batting']['@s_h'] + '\n' + 'HRs: ' + data['batting']['@s_hr'] + '\n' + 'RBIs: ' + data['batting']['@s_rbi'] + '\n' + 'SO: ' + data['batting']['@s_so'] + '\n' + 'BB: ' + data['batting']['@s_bb']
             except urllib.error.HTTPError:
                 pass
 
@@ -173,7 +174,7 @@ def reply_handler(bot, update):
             request = update.message.text
             player_stats = get_stats(request)
             if player_stats:
-                bot.sendMessage(update.message.chat_id, text=player_stats)
+                bot.sendMessage(update.message.chat_id, text=player_stats, parse_mode='Markdown')
 
 
 def error(bot, update, error):
