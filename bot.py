@@ -31,6 +31,24 @@ def get_game(team,date):
     return None
 
 
+def get_schedule():
+    day = date.today()
+    sched = []
+    for d in range(3):
+        day_name = day.strftime('%a %-m/%-d')
+        try:
+            game = get_game('Phillies', day)
+            if game['home_team_name'] == 'Phillies':
+                against = game['away_team_name']
+            else:
+                against = game['home_team_name']
+            sched.append(day_name + ': ' + against + ' - ' + game['time'])
+        except urllib.error.HTTPError:
+            sched.append(day.strftime('%a') + ': Off')
+        day += timedelta(days=1)
+    return '\n'.join(sched)
+
+
 def get_pitchers():
     today = date.today()
     game = get_game('Phillies',today)
@@ -67,7 +85,7 @@ def get_record():
     game_date = date.today() 
     game = get_game('Phillies',game_date) 
     while not game: 
-        game_date += timedelta.days(1)
+        game_date += timedelta(days=1)
     if game['home_team_name'] == 'Phillies':
         return str(game['home_win']) + ' - ' + str(game['home_loss'])
     else:
@@ -80,14 +98,22 @@ def get_status():
     if game:
         try: 
             status = {'inning': game['status']['inning'],
-                    'inning_state': game['status']['inning_state'],
-                    'outs' : game['status']['o'],
-                    'batter': game['batter']['name_display_roster'],
-                    'avg' : game['batter']['avg'],
-                    'runners' : game['runners_on_base']['status']
+                      'inning_state': game['status']['inning_state'],
+                      'outs' : game['status']['o'],
+                      'batter': game['batter']['name_display_roster'],
+                      'avg' : game['batter']['avg'],
+                      'runners': game['runners_on_base']['status']
                     }
+            runners = {'0': 'bases empty',
+                       '1': 'a runner on 1st',
+                       '2': 'a runner on 2nd',
+                       '3': 'a runner on 3rd',
+                       '4': 'runners on 1st and 2nd',
+                       '5': 'runners on 1st and 3rd',
+                       '6': 'runners on 2nd and 3rd',
+                       '7': 'the basses loaded'}
             p = inflect.engine()
-            return status['inning_state'] + ' of the ' + p.ordinal(status['inning']) + ' with ' + status['outs'] + ' ' + p.plural('out', status['outs']) + ' - ' + status['batter'] + '(' + status['avg'] + ' AVG) with ' + status['runners'] + ' ' + p.plural('runner', status['runners']) + ' on base.'
+            return status['inning_state'] + ' of the ' + p.ordinal(status['inning']) + ' with ' + status['outs'] + ' ' + p.plural('out', status['outs']) + ' - ' + status['batter'] + '(' + status['avg'] + ' AVG) with ' + runners[status['runners']]+'.'
 
         except KeyError:
             return get_score()
@@ -133,7 +159,7 @@ def start(bot, update):
 def help(bot, update):
     bot.sendMessage(update.message.chat_id,
                     parse_mode= 'Markdown',
-                    text= """I am PhilliesBot. You can ask me to tell you the score of today\'s game by sending `/score`. Other commands: \n `/status` Details of whats going on in the game \n `/pitchers` Find out who's pitching in today's game \n `/record` Gets the current Phillies' record \n `/stats` Get any MLB player's hitting stats""")
+                    text= """I am PhilliesBot. You can ask me to tell you the score of today\'s game by sending `/score`. Other commands: \n `/status` Details of whats going on in the game \n `/schedule` See the next three games of their schedule \n`/pitchers` Find out who's pitching in today's game \n `/record` Gets the current Phillies' record \n `/stats` Get any MLB player's hitting stats""")
 
 
 def score(bot, update):
@@ -163,6 +189,10 @@ def status(bot, update):
 
 def stats(bot, update):
     bot.sendMessage(update.message.chat_id, text='Which player would you like stats for?')
+
+
+def schedule(bot, update):
+    bot.sendMessage(update.message.chat_id, text= get_schedule())
 
 
 def reply_handler(bot, update):
@@ -203,6 +233,7 @@ def main():
     dp.addTelegramCommandHandler("status",status)
     dp.addTelegramCommandHandler("howard",howard)
     dp.addTelegramCommandHandler("stats", stats)
+    dp.addTelegramCommandHandler('schedule', schedule)
     dp.addTelegramMessageHandler(reply_handler)
 
     # on noncommand i.e message - echo the message on Telegram
